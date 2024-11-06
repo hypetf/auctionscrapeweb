@@ -7,7 +7,7 @@ const { MongoClient } = require("mongodb");
 const AuctionModel = require('./db/models/Auction')
 const { connectToDatabase, closeDatabaseConnection } = require('./db/handshake');
 const { insertBulkAuctions } = require('./db/insertBulkAuctions')
-const { scrapeAuctionHouse } = require('./scrapers/auctionhouse')
+const { scrapeAuctionHouse } = require('./scrapers/auctionHouse')
 const mongoURI = `mongodb+srv://rabbanikhan2001:${process.env.MONGODB_PW}@propertypulse.sb5xc.mongodb.net/`
 const PORT = process.env.PORT || 3000;
 
@@ -17,76 +17,10 @@ const db_client = new MongoClient(mongoURI, {
 });
 
 connectToDatabase(db_client);
-// const result = await scrapeAuctionHouse(db_client);
-// res.json(result);
+
 app.get('/scrape', async (req, res) => {
-    
-  const browser = await chromium.launch();
-  const page = await browser.newPage();
-  const titleSelector = '.lot-search-result';
-
-  try {
-    await page.goto('https://www.auctionhouse.co.uk/manchester/auction/search-results');
-    await page.waitForSelector(titleSelector);
-
-    const data = await page.evaluate(() => {
-      const listings = Array.from(document.querySelectorAll('.lot-search-result'));
-    
-      return listings.map(listing => {
-        const address = listing.querySelector('.summary-info-wrapper')?.innerText.trim();
-    
-        const residentialElements = listing.querySelectorAll('.lotbg-residential');
-        const onlineElements = listing.querySelectorAll('.lotbg-online');
-    
-        let price = 'No Price Provided';
-    
-        if (residentialElements.length > 1) {
-          price = residentialElements[1]?.innerText.trim();
-        } else if (onlineElements.length > 0) {
-          price = onlineElements[0]?.innerText.trim();
-        }
-    
-        return { address, price };
-      });
-    });
-    
-
-    const cleanedData = data.map(item => {
-      const cleanedAddress = item.address
-        ? item.address.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim()
-        : 'No Address Provided';
-      
-      const cleanedPriceString = item.price
-        ? item.price.replace(/\s+/g, ' ').trim()
-        : 'No Price Provided';
-      const cleanedPrice = cleanedPriceString.match(/[\d,.]+/) ? parseFloat(cleanedPriceString.match(/[\d,.]+/)[0].replace(/,/g, '')) : null;
-      return {
-        address: cleanedAddress,
-        price: cleanedPriceString,
-        cleanedPrice: cleanedPrice
-      };
-    });
-
-    // const auctionPromises = cleanedData.map(async (item) => {
-    //   const newAuction = new AuctionModel({
-    //     title: item.address,
-    //     price: item.price
-    //   });
-    //   return newAuction.save(); 
-    // });
-
-    // await Promise.all(auctionPromises);
-
-    await insertBulkAuctions(db_client, cleanedData)
-    console.log(`Scraped and inserted ${cleanedData.length} auctions`);
-    res.json({ success: true, data });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: err.message });
-  } finally {
-    await browser.close();
-  }
+  const result = await scrapeAuctionHouse(db_client);
+  res.json(result);
 });
 
 app.use((req, res) => {
