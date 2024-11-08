@@ -22,7 +22,7 @@ const scrapeAuctionHouse = async (db_client) => {
         const onlineElement = listing.querySelector('.lotbg-online');
         const residentialElements = listing.querySelectorAll('.lotbg-residential');
         const commercialElements = listing.querySelectorAll('.lotbg-commercial');
-        let propertyType = 'No Property Type specified'
+        let propertyType = 'No Property Type specified';
         if (onlineElement) {
           price = onlineElement.innerText.trim();
           propertyType = "Online"
