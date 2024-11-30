@@ -1,34 +1,52 @@
-
 require('dotenv').config();
 const express = require('express');
 const app = express();
-const { chromium } = require('playwright');
+const cors = require('cors');
+const fs = require('fs');
+const csv = require('csv-parser');
 const { MongoClient } = require("mongodb");
-const AuctionModel = require('./db/models/Auction')
 const { connectToDatabase, closeDatabaseConnection } = require('./db/handshake');
-const { insertBulkAuctions } = require('./db/insertBulkAuctions')
 const { scrapeAuctionHouse } = require('./scrapers/auctionHouse')
+const { scrapePughAuctions } = require('./scrapers/pughAuctions')
+const Auction = require('./db/models/Auction');
 const mongoURI = `mongodb+srv://rabbanikhan2001:${process.env.MONGODB_PW}@propertypulse.sb5xc.mongodb.net/`
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 const db_client = new MongoClient(mongoURI, {
     serverSelectionTimeoutMS: 30000,
     socketTimeoutMS: 60000
 });
 
+app.use(cors({
+	origin: 'http://localhost:5173', // Replace with your frontend's URL
+}));
+
 connectToDatabase(db_client);
 
 app.get('/scrape', async (req, res) => {
-  const result = await scrapeAuctionHouse(db_client);
-  res.json(result);
+	const { target } = req.query;
+	let result;
+	try {
+		if (target === 'pugh') {
+			result = await scrapePughAuctions(db_client);
+		} else if (target === 'auctionhouse') {
+			result = await scrapeAuctionHouse(db_client);
+	  	} else {
+			return res.status(400).json({ error: 'Invalid target specified at /scrape' });
+		}
+		res.json(result);
+	} catch (error) {
+	  console.error('Error scraping:', error);
+	  res.status(500).json({ error: 'An error occurred while scraping' });
+	}
 });
 
 app.use((req, res) => {
-  res.status(404).send('Page not found');
+	res.status(404).send('Page not found');
 });
 
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+	console.log(`Server is running on http://localhost:${PORT}`);
 });
 
 

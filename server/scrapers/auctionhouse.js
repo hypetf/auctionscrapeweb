@@ -1,4 +1,6 @@
+const path = require('path');
 const { chromium } = require('playwright');
+const { loadCertificates } = require('../utils/loadCertificates');
 const { insertBulkAuctions } = require('../db/insertBulkAuctions');
 
 const scrapeAuctionHouse = async (db_client) => {
@@ -6,6 +8,9 @@ const scrapeAuctionHouse = async (db_client) => {
   const page = await browser.newPage();
   const titleSelector = '.lot-search-result';
   let auctionData = [];
+  
+  const certificatesFilePath = path.resolve(__dirname, '../utils/certificates.csv');
+  const certificates = await loadCertificates(certificatesFilePath);
 
   try {
     await page.goto('https://www.auctionhouse.co.uk/manchester/auction/search-results');
@@ -25,13 +30,13 @@ const scrapeAuctionHouse = async (db_client) => {
         let propertyType = 'No Property Type specified';
         if (onlineElement) {
           price = onlineElement.innerText.trim();
-          propertyType = "Online"
+          propertyType = "Online";
         } else if (residentialElements.length > 1) {
           price = residentialElements[1].innerText.trim();
-          propertyType = "Residential"
+          propertyType = "Residential";
         } else if (commercialElements.length > 1) {
           price = commercialElements[1].innerText.trim();
-          propertyType = "Commercial"
+          propertyType = "Commercial";
         }
         
         const title = listing.querySelector('.summary-info-wrapper p.fw-bold')?.innerText.trim() || 'No Title Provided';
@@ -44,28 +49,37 @@ const scrapeAuctionHouse = async (db_client) => {
           title,
           address,
           price
-         };
+        };
       });
     });
     
     const cleanedData = auctionData.map(auction => {
       const cleanedPriceString = auction.price.replace(/\s+/g, ' ').trim();
       const cleanedPrice = cleanedPriceString.match(/[\d,.]+/) ? parseFloat(cleanedPriceString.match(/[\d,.]+/)[0].replace(/,/g, '')) : null;
-
+      const postcodeRegex = /\b[A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2}\b/;
+      const match = auction.address.match(postcodeRegex);
+      const postcode = match ? match[0] : 'No Postcode';
+      
+      const certificate = certificates.find(cert => cert.Postcode === postcode);
+      const currentEnergyRating = certificate ? certificate.CURRENT_ENERGY_RATING : 'Not Found';
+      const potentialEnergyRating = certificate ? certificate.POTENTIAL_ENERGY_RATING : 'Not Found';
+      
       return {
-        // id: auctionId,
         auctionLink: auction.auctionLink,
         imageSrc: auction.imageSrc,
         propertyType: auction.propertyType,
         title: auction.title,
         address: auction.address,
+        postcode: postcode,
         price: cleanedPriceString,
         cleanedPrice: cleanedPrice,
+        CURRENT_ENERGY_RATING: currentEnergyRating,
+        POTENTIAL_ENERGY_RATING: potentialEnergyRating,
         timeOfScrape: Date.now()
       };
     });
 
-    await insertBulkAuctions(db_client, cleanedData);
+    // await insertBulkAuctions(db_client, cleanedData);
     return { success: true, data: cleanedData };
 
   } catch (err) {

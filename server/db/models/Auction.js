@@ -22,12 +22,24 @@ const auctionSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    postcode: {
+        type: String,
+        required: false
+    },
     price: {
         type: String,
         required: true
     },
     cleanPrice: {
         type: Number,
+        required: false
+    },
+    CURRENT_ENERGY_RATING: {
+        type: String,
+        required: false
+    },
+    WINDOWS_ENV_EFF: {
+        type: String,
         required: false
     },
     timeOfScrape: {
