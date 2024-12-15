@@ -26,11 +26,11 @@ export default function PropertyCard({ property }) {
             <div className="property-ratings">
               <div className="rating">
                 <span className="info-label">Current Energy Rating:</span>
-                {property.CURRENT_ENERGY_RATING}
+                <b>{property.EPC_Data["current-energy-rating"] ? property.EPC_Data["current-energy-rating"] : "NA"}</b>
               </div>
               <div className="rating">
                 <span className="info-label">Potential Energy Rating:</span>
-                {property.POTENTIAL_ENERGY_RATING}
+                <b>{property.EPC_Data["potential-energy-rating"] ? property.EPC_Data["potential-energy-rating"] : "NA"}</b>
               </div>
             </div>
           </div>

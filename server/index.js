@@ -2,13 +2,12 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 const cors = require('cors');
-const fs = require('fs');
-const csv = require('csv-parser');
 const { MongoClient } = require("mongodb");
 const { connectToDatabase, closeDatabaseConnection } = require('./db/handshake');
 const { scrapeAuctionHouse } = require('./scrapers/auctionHouse')
 const { scrapePughAuctions } = require('./scrapers/pughAuctions')
 const Auction = require('./db/models/Auction');
+const fetchEPCData = require('./utils/fetchEPCData');
 const mongoURI = `mongodb+srv://rabbanikhan2001:${process.env.MONGODB_PW}@propertypulse.sb5xc.mongodb.net/`
 const PORT = process.env.PORT || 3001;
 
@@ -18,7 +17,7 @@ const db_client = new MongoClient(mongoURI, {
 });
 
 app.use(cors({
-	origin: 'http://localhost:5173', // Replace with your frontend's URL
+	origin: 'http://localhost:5173',
 }));
 
 connectToDatabase(db_client);
@@ -45,8 +44,10 @@ app.use((req, res) => {
 	res.status(404).send('Page not found');
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async() => {
 	console.log(`Server is running on http://localhost:${PORT}`);
+	// let epcdata = await fetchEPCData("OL13 0RY", "28 Lord Avenue, Stacksteads, Rossendale, Lancashire, OL13 0RY");
+	// console.log(epcdata)
 });
 
 

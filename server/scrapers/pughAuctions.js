@@ -1,6 +1,4 @@
-const path = require('path');
 const { chromium } = require('playwright');
-const { loadCertificates } = require('../utils/loadCertificates');
 // const { insertBulkAuctions } = require('../db/insertBulkAuctions');
 
 const scrapePughAuctions = async (db_client) => {
@@ -9,11 +7,8 @@ const scrapePughAuctions = async (db_client) => {
   const listingSelector = '.h-full.mb-8';
   let auctionData = [];
 
-  const certificatesFilePath = path.resolve(__dirname, '../utils/certificates.csv');
-  const certificates = await loadCertificates(certificatesFilePath);
-
   try {
-    await page.goto('https://www.pugh-auctions.com/property-search?location=trafford&property-type=&radius=area&guide-price-from=0&guide-price-to=2000000&date-added=');
+    await page.goto('https://www.pugh-auctions.com/property-search?location=&property-type=&radius=area&guide-price-from=0&guide-price-to=2000000&date-added=');
     await page.waitForSelector(listingSelector);
 
     auctionData = await page.evaluate(() => {
@@ -41,10 +36,6 @@ const scrapePughAuctions = async (db_client) => {
       const match = auction.address.match(postcodeRegex);
       const postcode = match ? match[0] : 'No Postcode';
 
-      const certificate = certificates.find(cert => cert.Postcode === postcode);
-      const currentEnergyRating = certificate ? certificate.CURRENT_ENERGY_RATING : 'Not Found';
-      const potentialEnergyRating = certificate ? certificate.POTENTIAL_ENERGY_RATING : 'Not Found';
-
       return {
         auctionLink: auction.auctionLink,
         imageSrc: auction.imageSrc,
@@ -52,8 +43,6 @@ const scrapePughAuctions = async (db_client) => {
         postcode: postcode,
         price: cleanedPriceString,
         cleanedPrice: cleanedPrice,
-        CURRENT_ENERGY_RATING: currentEnergyRating,
-        POTENTIAL_ENERGY_RATING: potentialEnergyRating,
         timeOfScrape: Date.now()
       };
     });
